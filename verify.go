@@ -33,6 +33,34 @@ func VerifyJSON(policy IAMRolePolicy) bool {
 	return true
 }
 
+// Not sure if this validation is necessary, but otherwise it may not be the expectet data
+func validatePolicy(policy IAMRolePolicy) error {
+	if policy.PolicyName == "" {
+		return fmt.Errorf("missing 'PolicyName")
+	}
+
+	if policy.PolicyDocument.Version == "" {
+		return fmt.Errorf("missing 'PolicyDocument.Version")
+	}
+
+	if len(policy.PolicyDocument.Statement) == 0 {
+		return fmt.Errorf("missing 'PolicyDocument.Statement")
+	}
+
+	for i, stm := range policy.PolicyDocument.Statement {
+		if len(stm.Action) == 0 {
+			return fmt.Errorf("missing 'PolicyDocument.Statement.Action' in statement: %d", i)
+		}
+		if stm.Effect == "" {
+			return fmt.Errorf("missing 'PolicyDocument.Statement.Effect' in statement: %d", i)
+		}
+		if stm.Resource == "" {
+			return fmt.Errorf("missing 'PolicyDocument.Statement.Resource' in statement: %d", i)
+		}
+	}
+	return nil
+}
+
 func GetPath() string {
 	fmt.Println("Path of AWS::IAM::Role Policy JSON file:")
 	var path string
@@ -50,7 +78,13 @@ func ReadJSON(path string) string {
 		if err != nil {
 			return fmt.Sprintf("Error occured while unmarshalling JSON file: %s\n", err)
 		} else {
-			return fmt.Sprintf("Doesn't contain single asterisk: %t", VerifyJSON(policy))
+			isValid := validatePolicy(policy)
+			if isValid == nil {
+				return fmt.Sprintf("Doesn't contain single asterisk: %t", VerifyJSON(policy))
+			} else {
+				return fmt.Sprintf("JSON input data incorrect: %s", isValid)
+			}
+
 		}
 	}
 }
